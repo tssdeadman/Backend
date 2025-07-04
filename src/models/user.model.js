@@ -1,0 +1,95 @@
+import mongoose,{Schema, Types} from "mongoose";
+import jwt from "jsonwebtoken";
+import bcrypt from 'bcrypt'
+
+const userSchema = new Schema (
+    {
+        username:{
+            type: String,
+            required: true,
+            unique : true,
+            trim: true,
+            lowecase: true,
+            index: true,
+            // index is used to searching in data base
+        },
+        fullname:{
+            type: String,
+            required: true,
+            trim: true,
+            lowecase: true,
+            index: true,
+            // index is used to searching in data base
+        },
+        email:{
+            type: String,
+            required: true,
+            unique : true,
+            trim: true,
+            lowecase: true,
+            index: true,
+            // index is used to searching in data base
+        },
+        avatar:{
+            type: String,
+            required: true,
+        },
+        coverImage:{
+            type: true,
+        },
+        watchHistory:[
+            {
+                type: Schema.Types.ObjectId,
+                ref:"Video"
+            }
+        ],
+        password:{
+            type: String,
+            required:true,
+        },
+        refreshToken:{
+            type: String,
+        }
+    },
+    {timestamps:true,}
+)
+// here in pre we can not use call back func ()=> becouse we need instance or this from userSchema
+// as ()=> does not give this or instance
+userSchema.pre('save', async function (next){
+    if(!this.password.isModified('password')) return;
+    this.password = bcrypt.hash(this.password,10);
+    next();
+})
+
+userSchema.methods.isPasswordCorrect = async function (password){
+    return bcrypt.compare(password,this.password)
+}
+
+userSchema.methods.generateToken = function(){
+    return jwt.sign(
+        {
+            _id: this._id,
+            username: this.username,
+            email: thid.email,
+            fullname: this.fullname,
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        {
+            expiresIN: process.env.ACCESS_TOKEN_EXPIRY,
+        }
+    )
+}
+
+userSchema.methods.generateToken = function(){
+    return jwt.sign(
+        {
+            _id: this._id,
+        },
+        process.env.REFRESH_TOKEN_SECRET,
+        {
+            expiresIN: process.env.REFRESH_TOKEN_SECRET,
+        }
+    )
+}
+
+export const User = mongoose.model('User',userSchema) 
