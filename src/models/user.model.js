@@ -55,14 +55,16 @@ const userSchema = new Schema (
 )
 // here in pre we can not use call back func ()=> becouse we need instance or this from userSchema
 // as ()=> does not give this or instance
+
+// why this pre becouse when user write password at forst time so it should not save in string it should save save in ecrypt
 userSchema.pre('save', async function (next){
     if(!this.password.isModified('password')) return;
-    this.password = bcrypt.hash(this.password,10);
+    this.password = await bcrypt.hash(this.password,10);
     next();
 })
 
 userSchema.methods.isPasswordCorrect = async function (password){
-    return bcrypt.compare(password,this.password)
+    return await bcrypt.compare(password,this.password)
 }
 
 userSchema.methods.generateToken = function(){
