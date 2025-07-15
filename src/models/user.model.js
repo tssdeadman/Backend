@@ -34,8 +34,8 @@ const userSchema = new Schema (
             type: String,
             required: true,
         },
-        coverImage:{
-            type: true,
+        coverimage:{
+            type: String,
         },
         watchHistory:[
             {
@@ -58,7 +58,7 @@ const userSchema = new Schema (
 
 // why this pre becouse when user write password at forst time so it should not save in string it should save save in ecrypt
 userSchema.pre('save', async function (next){
-    if(!this.password.isModified('password')) return;
+    if(!this.isModified('password')) return;
     this.password = await bcrypt.hash(this.password,10);
     next();
 })
@@ -67,29 +67,29 @@ userSchema.methods.isPasswordCorrect = async function (password){
     return await bcrypt.compare(password,this.password)
 }
 
-userSchema.methods.generateToken = function(){
+userSchema.methods.generateAccessToken = function(){
     return jwt.sign(
         {
             _id: this._id,
             username: this.username,
-            email: thid.email,
+            email: this.email,
             fullname: this.fullname,
         },
         process.env.ACCESS_TOKEN_SECRET,
         {
-            expiresIN: process.env.ACCESS_TOKEN_EXPIRY,
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
         }
     )
 }
 
-userSchema.methods.generateToken = function(){
+userSchema.methods.generateRefreshToken = function(){
     return jwt.sign(
         {
             _id: this._id,
         },
         process.env.REFRESH_TOKEN_SECRET,
         {
-            expiresIN: process.env.REFRESH_TOKEN_SECRET,
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
         }
     )
 }
