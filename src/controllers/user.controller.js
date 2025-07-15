@@ -196,6 +196,10 @@ const logoutUser = asynchandler( async(req,res)=>{
 //  that have in cookies and in backenend we take incoming refresh token compare with .env token by jwt verify 
 // and then find user by id then generate new access and refresh token send to user.
 
+// -------------------------------------------------------------------------
+// [Belowe this line is condition where user has been login and using our server then it means to get data from user just do req.user]
+// -------------------------------------------------------------------------
+
 const refreshAccesstoken= asynchandler( async(req,res)=>{
     const incomingrefreshtoken = req.cookies.refreshToken || req.body.refreshToken;
 
@@ -243,4 +247,79 @@ const refreshAccesstoken= asynchandler( async(req,res)=>{
 
 })
 
-export {registerUser, loginUser, logoutUser, refreshAccesstoken};
+// Update Password, Get current user, update Profile
+
+const updatecurrentpassword = asynchandler(async(req,res)=>{
+    const{oldpassword,newpassword}= req.body;
+
+    if (!oldpassword || !newpassword) {
+        throw new ApiError(401,"Please Enter Password");
+    }
+
+    const user = await User.findById(req.user._id);
+
+    const newpasswordcorect = user.isPasswordCorrect(newpassword,user.password);
+
+    if (!newpasswordcorect) {
+        throw new ApiError(401,"the old password is wrogn");
+    }
+
+    user.password = newpassword;
+
+    user.save({validateBeforeSave:false})
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,
+        {},"Your Password Changed Successfully"
+    ))
+})
+
+// get current user
+
+const getcurrentuser = asynchandler(async(req,res)=>{
+    return res
+    .status(200)
+    .json(new ApiResponse(200, req.user, "The current user get successfully"))
+})
+
+// Update Profile
+
+const updateAccount = asynchandler(async(req,res)=>{
+    const {fullname,email} = req.body;
+
+    if (!fullname && !email) {
+        throw new ApiError(401,"Provide Fullname or Username");
+    }
+
+    const user = await User.findByIdAndUpdate(req.user._id,
+        {
+            $set:{fullname:fullname, email:email},
+        },
+        {
+            new:true,
+        }
+    )
+
+    if (!user) {
+        throw new ApiError(401,"Inavalid User");
+    }
+
+    user.save({validateBeforeSave:false})
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,{},"User Fullname and Email has been changed"));
+})
+
+
+
+export {
+    registerUser,
+    loginUser,
+    logoutUser, 
+    refreshAccesstoken,
+    updatecurrentpassword,
+    getcurrentuser,
+    updateAccount
+    };
