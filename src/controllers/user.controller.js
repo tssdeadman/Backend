@@ -49,12 +49,49 @@ const registerUser = asynchandler( async(req,res)=>{
         $or:[{ username },{ email }]
     });
 
-
+ 
     if (existeduser) {
         throw new ApiError(409,"Already Existed USer");
     }
 
     // finding localpath for cloudinary so it can upload on cloudinary
+
+    //    console.log("req.body..=", req.body);
+
+    //    req.body..= [Object: null prototype] {
+    //   username: 'dd12',
+    //   email: 'dd@14',
+    //   password: '1245789',
+    //   fullname: 'deepak'
+    // }
+
+
+    // console.log("req.files..=", req.files);
+
+    // req.files = {
+    //   avatar: [
+    //     index 0 {
+    //       fieldname: 'avatar',
+    //       originalname: 'photo.jpg',
+    //       encoding: '7bit',
+    //       mimetype: 'image/jpeg',
+    //       destination: 'uploads/',
+    //       filename: 'avatar-1234.jpg',
+    //       path: 'uploads/avatar-1234.jpg', // 👈 yahi milega
+    //       size: 12345
+    //     },
+    // index 1 {}
+    //   ]
+    // }
+
+
+    // console.log("req.body.email..=", req.body.email);
+    // req.body.email..= dd@14
+    
+    // Multer automatically:
+    // Form-data body parse karta hai
+    // File ko uploads/ folder me save karta hai
+    // [[req.files object me file ka details bhar deta hai]]
 
     const avatarlocalpath = req.files?.avatar?.[0]?.path;
     const coverimagelocalpath = req.files?.coverimage?.[0]?.path;
@@ -86,7 +123,10 @@ const registerUser = asynchandler( async(req,res)=>{
     // Uploading Avatar and coverimage on cloudinary
 
     const avatar = await uploadOnCloudinary(avatarlocalpath);
+    // here return will be response
     const coverimage = await uploadOnCloudinary(coverimagelocalpath);
+
+
 
     if (!avatar) {
         throw new ApiError(400,"Avatar is Required"); 
@@ -101,6 +141,7 @@ const registerUser = asynchandler( async(req,res)=>{
         username: username.toLowerCase(),
     })
 
+    // here user created and save automaticaly so pre.password runs and password get hashed.
 
     const createduser = await User.findById(user._id).select(
         "-password -refreshToken"
@@ -312,7 +353,62 @@ const updateAccount = asynchandler(async(req,res)=>{
     .json(new ApiResponse(200,{},"User Fullname and Email has been changed"));
 })
 
+const updateAvatar = asynchandler(async (req,res)=>{
 
+    const avatarlocalpath = req.file?.path;
+    
+    // here when we upload it will be single file so need mentioned avatar file and no need array
+
+    if (!avatarlocalpath) {
+        throw new ApiError(401,"Please Upload File");
+    }
+
+    const avatar = await uploadOnCloudinary(avatarlocalpath);
+
+    if (!avatar.url) {
+        throw new ApiError(401,"Something Wrogn while Avatar upload on clodinary")
+    }
+
+    const user = await User.findByIdAndUpdate(req.user?._id,
+        {
+            $set:{avatar:avatar.url},
+        },
+        {
+            new:true,
+        }).select("-password");
+        // here we return user 
+
+        return res
+        .status(200)
+        .json(new ApiResponse(200,user,"Avatar Update Successfully"))
+})
+
+const updateCoverimage = asynchandler(async (req,res)=>{
+
+    const coverimagelocalpath = req.file?.path;
+
+    if (!coverimagelocalpath) {
+        throw new ApiError(401,"Please Upload Coverimage");
+    }
+
+    const coverimage = await uploadOnCloudinary(coverimagelocalpath);
+
+    if (!coverimage) {
+        throw new ApiError(401,"Something Wrogn when coverimage is upload");
+    }
+
+    const user = User.findByIdAndUpdate(req.user?._id,
+        {
+            $set:{coverimage:coverimage.url},
+        },
+        {
+            new:true,
+        }).select("-password");
+
+        return res
+        .status(200)
+        .json(new ApiResponse(200, user, "Coverimage update successfully"))
+})
 
 export {
     registerUser,
@@ -321,5 +417,7 @@ export {
     refreshAccesstoken,
     updatecurrentpassword,
     getcurrentuser,
-    updateAccount
+    updateAccount,
+    updateAvatar,
+    updateCoverimage
     };
